@@ -1,0 +1,392 @@
+{% load static %}
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>PharmaGarde - Accueil</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="{% static 'pharmacie/logo.ico' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet Routing Machine CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+  <!-- Leaflet Routing Machine JS -->
+  <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+
+
+  {% tailwind_css %}
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-gradient-to-br from-green-50 to-white min-h-screen font-sans text-gray-800">
+
+  <!-- Navigation -->
+  <nav class="bg-green-600 text-white shadow">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between h-16 items-center">
+        <div class="flex items-center space-x-3">
+          <img src="{% static 'pharmacie/logo.png' %}" alt="Logo de l'application PharmaGarde - Trouvez une pharmacie de garde près de vous" class="h-10">
+        </div>
+        <div class="hidden md:flex space-x-6">
+            <a href="#" class="hover:text-green-200">Accueil</a>
+            <a href="#a-propos" class="hover:text-green-200">À propos</a>
+            <a href="#contact" class="hover:text-green-200">Contact</a>            
+        </div>
+        <div class="hidden md:block">
+          <a href="#" class="bg-white text-green-600 px-4 py-2 rounded font-medium hover:bg-green-100">Télécharger l'app</a>
+        </div>
+        <div class="md:hidden">
+          <button id="menu-btn" class="text-white focus:outline-none">
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div id="mobile-menu" class="md:hidden px-4 pb-4 hidden">
+        <a href="#" class="hover:text-green-200">Accueil</a>
+        <a href="#a-propos" class="hover:text-green-200">À propos</a>
+        <a href="#contact" class="hover:text-green-200">Contact</a>        
+      <a href="#" class="block py-2 text-green-600 bg-white rounded px-3 mt-2 text-center">Télécharger l'app</a>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="text-center py-20 px-4 bg-white">
+    <div class="max-w-4xl mx-auto">
+      <h1 class="text-4xl sm:text-5xl font-bold text-green-700 mb-4">Trouvez rapidement une pharmacie de garde près de chez vous</h1>
+      <p class="text-lg text-gray-600 mb-8">PharmaGarde vous guide vers les pharmacies ouvertes en urgence, 24h/24 et 7j/7.</p>
+      <a href="#ville-select" class="bg-green-600 text-white px-6 py-3 rounded-full font-semibold shadow hover:bg-green-700 transition">
+        Trouver une pharmacie
+      </a>
+    </div>
+  </section>
+
+  <!-- Sélecteur de Ville + Liste -->
+  <section class="max-w-3xl mx-auto px-4 py-12">
+    <h2 class="text-3xl font-bold text-green-600 mb-6 text-center">Pharmacies de Garde</h2>
+
+    <div class="bg-white rounded-xl shadow-lg p-6">
+      <label for="ville-select" class="block text-gray-700 font-medium mb-2">Choisir une ville</label>
+      <select id="ville-select" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+        <option value="">-- Sélectionner une ville --</option>
+        {% for ville in villes %}
+            <option value="{{ ville }}">{{ ville }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div id="pharmacies" class="mt-8 grid gap-6 sm:grid-cols-1 md:grid-cols-2">
+      <!-- Pharmacies affichées ici -->
+    </div>
+    <div id="map" class="w-full h-96 mt-8 rounded-lg shadow"></div>
+  </section>
+    <!-- Section À propos -->
+    <section id="a-propos" class="bg-white py-16 px-4">
+        <div class="max-w-4xl mx-auto text-center">
+          <h2 class="text-3xl font-bold text-green-600 mb-4">À propos de PharmaGarde</h2>
+          <p class="text-gray-700 text-lg leading-relaxed">
+            PharmaGarde est une initiative visant à faciliter l'accès rapide aux pharmacies de garde à travers Madagascar. 
+            Grâce à notre application et site web, vous pouvez facilement localiser une pharmacie ouverte près de chez vous, 
+            à toute heure du jour ou de la nuit.
+          </p>
+          <p class="mt-4 text-gray-600">
+            Notre mission est de garantir un service d’urgence accessible à tous, partout et en tout temps.
+          </p>
+        </div>
+      </section>
+    
+      <!-- Section Contact -->
+      <section id="contact" class="bg-green-50 py-16 px-4">
+        <div class="max-w-3xl mx-auto">
+          <h2 class="text-3xl font-bold text-green-600 mb-6 text-center">Contactez-nous</h2>
+          <form action="{% url 'contact' %}" method="POST" class="bg-white p-6 rounded-xl shadow-md space-y-4">
+            {% csrf_token %}
+            {% if messages %}
+              {% for message in messages %}
+                <div class="mb-4 p-4 rounded {{ message.tags }} {% if message.tags == 'success' %}bg-green-100 text-green-700{% elif message.tags == 'error' %}bg-red-100 text-red-700{% endif %}">
+                  {{ message }}
+                </div>
+              {% endfor %}
+            {% endif %}
+
+            <div>
+              <label for="nom" class="block text-gray-700 font-medium mb-1">Nom</label>
+              <input type="text" id="nom" name="nom" required class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-500">
+            </div>
+            <div>
+              <label for="email" class="block text-gray-700 font-medium mb-1">E-mail</label>
+              <input type="email" id="email" name="email" required class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-500">
+            </div>
+            <div>
+              <label for="message" class="block text-gray-700 font-medium mb-1">Message</label>
+              <textarea id="message" name="message" rows="5" required class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-500"></textarea>
+            </div>
+            <div class="text-center">
+              <button type="submit" class="bg-green-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-green-700 transition">
+                Envoyer le message
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+    
+
+  <!-- Footer -->
+  <footer class="bg-green-600 text-white text-center py-6">
+    <p>&copy; {{ now.year }} PharmaGarde. Tous droits réservés.</p>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script>
+    let map = null;
+    let markers = [];
+    let userLat = null;
+    let userLng = null;
+    let routeControl = null;
+    let userMarker = null;
+    let currentDestination = null;
+    let currentRouteInstructions = [];
+    let currentInstructionIndex = 0;
+
+    // Traduction française des instructions (simplifiée)
+    const frenchTranslator = {
+        directions: {
+            'Continue': 'Continuez',
+            'SlightRight': 'Légèrement à droite',
+            'Right': 'Tournez à droite',
+            'SharpRight': 'Fort à droite',
+            'TurnAround': 'Faites demi-tour',
+            'SharpLeft': 'Fort à gauche',
+            'Left': 'Tournez à gauche',
+            'SlightLeft': 'Légèrement à gauche',
+            'WaypointReached': 'Étape atteinte',
+            'Roundabout': 'Prenez le rond-point',
+            'DestinationReached': 'Destination atteinte'
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(
+                function (position) {
+                    userLat = position.coords.latitude;
+                    userLng = position.coords.longitude;
+
+                    if (!map) {
+                        initMap(userLat, userLng);
+                    } else {
+                        updateUserMarker(userLat, userLng);
+                        if (routeControl && currentDestination) {
+                            updateRouteIfFar();
+                        }
+                    }
+                },
+                function (error) {
+                    console.error("Erreur de géolocalisation :", error);
+                    initMap(-18.8792, 47.5079);
+                },
+                {
+                    enableHighAccuracy: true,
+                    maximumAge: 0,
+                    timeout: 5000
+                }
+            );
+        }
+
+        const villeSelect = document.getElementById('ville-select');
+        villeSelect.addEventListener('change', function () {
+            const ville = this.value;
+            const pharmaciesDiv = document.getElementById('pharmacies');
+            pharmaciesDiv.innerHTML = '<p class="text-gray-400 col-span-2">Chargement en cours...</p>';
+
+            fetch(`/api/pharmacies/${ville}/`)
+                .then(response => response.json())
+                .then(data => {
+                    pharmaciesDiv.innerHTML = '';
+                    clearMarkers();
+                    clearRoute();
+
+                    data.forEach((pharmacie) => {
+                        const card = document.createElement('div');
+                        card.className = "bg-white p-4 rounded shadow";
+                        card.innerHTML = `
+                            <h3 class="font-bold text-green-600">${pharmacie.nom}</h3>
+                            <p>${pharmacie.adresse}</p>
+                            <button onclick="afficherItineraire(${pharmacie.latitude}, ${pharmacie.longitude})"
+                                class="bg-green-600 text-white px-2 py-1 rounded mt-2">Afficher l'itinéraire</button>
+                        `;
+                        pharmaciesDiv.appendChild(card);
+                        addMarker(pharmacie);
+                    });
+
+                    if (data.length && data[0].latitude) {
+                        map.setView([data[0].latitude, data[0].longitude], 13);
+                    }
+                });
+        });
+    });
+
+    function initMap(lat, lng) {
+        map = L.map('map').setView([lat, lng], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap',
+            maxZoom: 18
+        }).addTo(map);
+        updateUserMarker(lat, lng);
+    }
+
+    function updateUserMarker(lat, lng) {
+        if (!userMarker) {
+            userMarker = L.marker([lat, lng], {
+                icon: L.icon({
+                    iconUrl: 'https://cdn-icons-png.flaticon.com/512/64/64113.png',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 30]
+                })
+            }).addTo(map).bindPopup("Vous êtes ici").openPopup();
+        } else {
+            userMarker.setLatLng([lat, lng]);
+        }
+    }
+
+    function addMarker(pharmacie) {
+        const marker = L.marker([pharmacie.latitude, pharmacie.longitude])
+            .addTo(map)
+            .bindPopup(`<strong>${pharmacie.nom}</strong><br>${pharmacie.adresse}`);
+        markers.push(marker);
+    }
+
+    function clearMarkers() {
+        markers.forEach(marker => map.removeLayer(marker));
+        markers = [];
+    }
+
+    function clearRoute() {
+        if (routeControl) {
+            map.removeControl(routeControl);
+            routeControl = null;
+        }
+    }
+
+    function afficherItineraire(pharmacieLat, pharmacieLng) {
+        clearRoute();
+
+        if (!userLat || !userLng) {
+            alert("Position utilisateur introuvable.");
+            return;
+        }
+
+        currentDestination = [pharmacieLat, pharmacieLng];
+        currentInstructionIndex = 0;
+
+        const router = L.Routing.osrmv1({ language: 'fr' });
+
+        routeControl = L.Routing.control({
+            router: router,
+            waypoints: [
+                L.latLng(userLat, userLng),
+                L.latLng(pharmacieLat, pharmacieLng)
+            ],
+            routeWhileDragging: false,
+            draggableWaypoints: false,
+            addWaypoints: false,
+            language: 'fr',
+            show: true,
+            lineOptions: {
+                styles: [{ color: 'green', opacity: 0.8, weight: 6 }]
+            },
+            createMarker: () => null
+        }).addTo(map);
+
+        routeControl.on('routesfound', function(e) {
+            const route = e.routes[0];
+            currentRouteInstructions = route.instructions;
+            lireInstruction(currentRouteInstructions[0].text); // Lire la première instruction
+        });
+    }
+
+    function updateRoute() {
+        clearRoute();
+        if (!userLat || !userLng || !currentDestination) return;
+
+        const router = L.Routing.osrmv1({
+            serviceUrl: 'https://router.project-osrm.org/route/v1',
+            language: 'fr'
+        });
+
+        routeControl = L.Routing.control({
+            router: router,
+            waypoints: [
+                L.latLng(userLat, userLng),
+                L.latLng(currentDestination[0], currentDestination[1])
+            ],
+            lineOptions: {
+                styles: [{ color: 'green', weight: 6 }]
+            },
+            show: true,
+            addWaypoints: false,
+            draggableWaypoints: false,
+            createMarker: () => null,
+            language: 'fr',
+            formatter: new L.Routing.Formatter({ language: 'fr' })
+        }).addTo(map);
+
+        routeControl.on('routesfound', function(e) {
+            const instructions = e.routes[0].instructions;
+            let delay = 0;
+            instructions.forEach((instr, index) => {
+                setTimeout(() => {
+                    lireInstruction(instr.text);  // Lecture à voix haute
+                }, delay);
+                delay += 3000; // Attend 3 secondes entre chaque instruction
+            });
+        });
+    }
+
+    // Fonction pour lire les instructions à voix haute
+    function lireInstruction(texte) {
+        const synth = window.speechSynthesis;
+        const utterance = new SpeechSynthesisUtterance(texte);
+        utterance.lang = 'fr-FR';
+
+        // Choisir une voix française si disponible
+        const voices = synth.getVoices().filter(voice => voice.lang.startsWith('fr'));
+        if (voices.length) {
+            utterance.voice = voices[0];
+        }
+
+        synth.cancel();  // Stoppe toute lecture précédente
+        synth.speak(utterance);
+    }
+
+    // Script pour ouvrir/fermer le menu burger
+    document.addEventListener('DOMContentLoaded', function () {
+      const menuBtn = document.getElementById('menu-btn');
+      const mobileMenu = document.getElementById('mobile-menu');
+      menuBtn.addEventListener('click', function() {
+        mobileMenu.classList.toggle('hidden');
+      });
+    });
+
+</script>
+
+</body>
+</html>
