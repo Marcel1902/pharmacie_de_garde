@@ -9,6 +9,7 @@
   <link rel="icon" type="image/png" href="{% static 'pharmacie/logo.ico' %}">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <!-- Leaflet JS -->
@@ -31,6 +32,21 @@
       }
     }
   </script>
+
+  <style>
+    /* Switch toggle animation */
+    #toggle-voice:checked + div {
+      background-color: #4ade80; /* Vert */
+    }
+
+    #toggle-voice:checked + div .dot {
+      transform: translateX(100%);
+    }
+
+    .dot {
+      transition: transform 0.3s ease;
+    }
+  </style>
 </head>
 <body class="bg-gradient-to-br from-green-50 to-white min-h-screen font-sans text-gray-800">
 
@@ -87,7 +103,7 @@
       <select id="ville-select" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
         <option value="">-- Sélectionner une ville --</option>
         {% for ville in villes %}
-            <option value="{{ ville }}">{{ ville }}</option>
+          <option value="{{ ville }}">{{ ville }}</option>
         {% endfor %}
       </select>
     </div>
@@ -95,8 +111,24 @@
     <div id="pharmacies" class="mt-8 grid gap-6 sm:grid-cols-1 md:grid-cols-2">
       <!-- Pharmacies affichées ici -->
     </div>
-    <div id="map" class="w-full h-96 mt-8 rounded-lg shadow"></div>
+
+    <!-- Switch lecture vocale -->
+    <div class="mt-8 w-max mx-auto">
+      <label for="toggle-voice" class="flex items-center cursor-pointer">
+        <span class="mr-3 text-gray-700">Lecture vocale</span>
+        <div class="relative">
+          <input type="checkbox" id="toggle-voice" class="sr-only" />
+          <div class="w-11 h-6 bg-gray-300 rounded-full shadow-inner transition-colors">
+            <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full"></div>
+          </div>
+        </div>
+      </label>
+    </div>
+
+    <div id="map" class="w-full h-96 mt-6 rounded-lg shadow"></div>
   </section>
+
+
     <!-- Section À propos -->
     <section id="a-propos" class="bg-white py-16 px-4">
         <div class="max-w-4xl mx-auto text-center">
@@ -155,6 +187,7 @@
 
   <!-- Scripts -->
   <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+
   <script>
     let map = null;
     let markers = [];
@@ -165,8 +198,9 @@
     let currentDestination = null;
     let currentRouteInstructions = [];
     let currentInstructionIndex = 0;
+    let lectureVocaleActivee = false;
+    let voices = [];  // Tableau global des voix
 
-    // Traduction française des instructions (simplifiée)
     const frenchTranslator = {
         directions: {
             'Continue': 'Continuez',
@@ -184,6 +218,20 @@
     };
 
     document.addEventListener('DOMContentLoaded', function () {
+        // Charger les voix une fois disponibles
+        window.speechSynthesis.onvoiceschanged = function () {
+            voices = speechSynthesis.getVoices().filter(voice => voice.lang.startsWith('fr'));
+        };
+
+        // Activation ou non de la lecture vocale
+        const toggleVoice = document.getElementById('toggle-voice');
+        if (toggleVoice) {
+            toggleVoice.addEventListener('change', function () {
+                lectureVocaleActivee = this.checked;
+            });
+        }
+
+        // Géolocalisation
         if (navigator.geolocation) {
             navigator.geolocation.watchPosition(
                 function (position) {
@@ -211,6 +259,7 @@
             );
         }
 
+        // Sélection de ville
         const villeSelect = document.getElementById('ville-select');
         villeSelect.addEventListener('change', function () {
             const ville = this.value;
@@ -227,9 +276,10 @@
                     data.forEach((pharmacie) => {
                         const card = document.createElement('div');
                         card.className = "bg-white p-4 rounded shadow";
-                        card.innerHTML = `
+                        card.innerHTML = ` 
                             <h3 class="font-bold text-green-600">${pharmacie.nom}</h3>
-                            <p>${pharmacie.adresse}</p>
+                            <p><i class="fa-solid fa-location-dot mr-3"></i>${pharmacie.adresse}</p>
+                            <p><i class="fa-solid fa-phone mr-3"></i>${pharmacie.telephone}</p>
                             <button onclick="afficherItineraire(${pharmacie.latitude}, ${pharmacie.longitude})"
                                 class="bg-green-600 text-white px-2 py-1 rounded mt-2">Afficher l'itinéraire</button>
                         `;
@@ -241,6 +291,13 @@
                         map.setView([data[0].latitude, data[0].longitude], 13);
                     }
                 });
+        });
+
+        // Burger menu
+        const menuBtn = document.getElementById('menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+        menuBtn.addEventListener('click', function() {
+            mobileMenu.classList.toggle('hidden');
         });
     });
 
@@ -319,73 +376,53 @@
         routeControl.on('routesfound', function(e) {
             const route = e.routes[0];
             currentRouteInstructions = route.instructions;
-            lireInstruction(currentRouteInstructions[0].text); // Lire la première instruction
+            // Utiliser setTimeout pour s'assurer que la synthèse vocale a le temps de démarrer
+            setTimeout(() => {
+                if (lectureVocaleActivee) {
+                    lireInstruction(currentRouteInstructions[0].text); // Lire la première instruction immédiatement
+                }
+            }, 300); // Retard de 300ms
         });
     }
 
-    function updateRoute() {
-        clearRoute();
-        if (!userLat || !userLng || !currentDestination) return;
+    function updateRouteIfFar() {
+        if (!currentDestination || !routeControl) return;
 
-        const router = L.Routing.osrmv1({
-            serviceUrl: 'https://router.project-osrm.org/route/v1',
-            language: 'fr'
-        });
+        const currentInstruction = currentRouteInstructions[currentInstructionIndex];
 
-        routeControl = L.Routing.control({
-            router: router,
-            waypoints: [
-                L.latLng(userLat, userLng),
-                L.latLng(currentDestination[0], currentDestination[1])
-            ],
-            lineOptions: {
-                styles: [{ color: 'green', weight: 6 }]
-            },
-            show: true,
-            addWaypoints: false,
-            draggableWaypoints: false,
-            createMarker: () => null,
-            language: 'fr',
-            formatter: new L.Routing.Formatter({ language: 'fr' })
-        }).addTo(map);
+        if (currentInstruction) {
+            const nextStep = currentInstructionIndex + 1 < currentRouteInstructions.length
+                ? currentRouteInstructions[currentInstructionIndex + 1]
+                : null;
 
-        routeControl.on('routesfound', function(e) {
-            const instructions = e.routes[0].instructions;
-            let delay = 0;
-            instructions.forEach((instr, index) => {
-                setTimeout(() => {
-                    lireInstruction(instr.text);  // Lecture à voix haute
-                }, delay);
-                delay += 3000; // Attend 3 secondes entre chaque instruction
-            });
-        });
+            if (nextStep && estProcheDeLEtape(nextStep, userLat, userLng)) {
+                // Si l'utilisateur est à moins de 10m de l'étape suivante, lire l'instruction
+                lireInstruction(nextStep.text);
+                currentInstructionIndex++;
+            }
+        }
     }
 
-    // Fonction pour lire les instructions à voix haute
+    function estProcheDeLEtape(etape, userLat, userLng) {
+        const etapeLatLng = L.latLng(etape.latLng.lat, etape.latLng.lng);
+        const distance = map.distance(etapeLatLng, L.latLng(userLat, userLng));
+        return distance <= 10; // 10 mètres
+    }
+
     function lireInstruction(texte) {
+        if (!lectureVocaleActivee) return;
+
         const synth = window.speechSynthesis;
         const utterance = new SpeechSynthesisUtterance(texte);
         utterance.lang = 'fr-FR';
 
-        // Choisir une voix française si disponible
-        const voices = synth.getVoices().filter(voice => voice.lang.startsWith('fr'));
         if (voices.length) {
-            utterance.voice = voices[0];
+            utterance.voice = voices[0]; // Utiliser la première voix disponible
         }
 
-        synth.cancel();  // Stoppe toute lecture précédente
+        synth.cancel();
         synth.speak(utterance);
     }
-
-    // Script pour ouvrir/fermer le menu burger
-    document.addEventListener('DOMContentLoaded', function () {
-      const menuBtn = document.getElementById('menu-btn');
-      const mobileMenu = document.getElementById('mobile-menu');
-      menuBtn.addEventListener('click', function() {
-        mobileMenu.classList.toggle('hidden');
-      });
-    });
-
 </script>
 
 </body>
