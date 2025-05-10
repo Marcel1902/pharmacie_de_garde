@@ -33,20 +33,6 @@
     }
   </script>
 
-  <style>
-    /* Switch toggle animation */
-    #toggle-voice:checked + div {
-      background-color: #4ade80; /* Vert */
-    }
-
-    #toggle-voice:checked + div .dot {
-      transform: translateX(100%);
-    }
-
-    .dot {
-      transition: transform 0.3s ease;
-    }
-  </style>
 </head>
 <body class="bg-gradient-to-br from-green-50 to-white min-h-screen font-sans text-gray-800">
 
@@ -117,13 +103,16 @@
       <label for="toggle-voice" class="flex items-center cursor-pointer">
         <span class="mr-3 text-gray-700">Lecture vocale</span>
         <div class="relative">
-          <input type="checkbox" id="toggle-voice" class="sr-only" />
-          <div class="w-11 h-6 bg-gray-300 rounded-full shadow-inner transition-colors">
-            <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full"></div>
+          <input type="checkbox" id="toggle-voice" class="sr-only peer" />
+          <!-- Fond du switch -->
+          <div class="w-11 h-6 rounded-full bg-gray-300 peer-checked:bg-green-400 transition-colors duration-300">
+            <!-- Le point mobile -->
+            <div class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform duration-300 peer-checked:translate-x-5"></div>
           </div>
         </div>
       </label>
     </div>
+
 
     <div id="map" class="w-full h-96 mt-6 rounded-lg shadow"></div>
   </section>
